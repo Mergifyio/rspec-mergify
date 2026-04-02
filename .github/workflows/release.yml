@@ -5,7 +5,7 @@ on:
       - published
 
 permissions:
-  contents: write
+  contents: read
   id-token: write
 
 jobs:
@@ -13,12 +13,12 @@ jobs:
     name: upload release to RubyGems
     runs-on: ubuntu-24.04
     environment: release
+    env:
+      GEM_VERSION: ${{ github.event.release.tag_name }}
     steps:
       - uses: actions/checkout@v6.0.2
         with:
           ref: ${{ github.event.release.tag_name }}
-          fetch-depth: 0
-          fetch-tags: true
 
       - uses: ruby/setup-ruby@v1
         with:
