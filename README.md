@@ -64,3 +64,5 @@ bundle exec rubocop
 ## License
 
 GPL-3.0-only
+
+CI TRIGGER
