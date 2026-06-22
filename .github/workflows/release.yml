@@ -26,4 +26,4 @@ jobs:
           bundler-cache: true
 
       - name: Publish to RubyGems
-        uses: rubygems/release-gem@v1.3.0
+        uses: rubygems/release-gem@v1.4.0
