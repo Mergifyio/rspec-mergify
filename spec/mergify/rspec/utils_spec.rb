@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'json'
+require 'tempfile'
 require 'mergify/rspec/utils'
 
 RSpec.describe Mergify::RSpec::Utils do
@@ -288,6 +290,82 @@ RSpec.describe Mergify::RSpec::Utils do
         .with('config', '--get', 'remote.origin.url')
         .and_return(nil)
       expect(described_class.repository_name).to be_nil
+    end
+  end
+
+  describe '.draft_pull_request?' do
+    around do |example|
+      original = ENV.to_h
+      example.run
+      ENV.replace(original)
+    end
+
+    def write_event(payload)
+      file = Tempfile.new(['event', '.json'])
+      file.write(JSON.generate(payload))
+      file.close
+      ENV['GITHUB_EVENT_PATH'] = file.path
+      file
+    end
+
+    it 'returns true for a draft pull request' do
+      ENV['GITHUB_EVENT_NAME'] = 'pull_request'
+      file = write_event({ 'pull_request' => { 'draft' => true } })
+      expect(described_class.draft_pull_request?).to be(true)
+    ensure
+      file&.unlink
+    end
+
+    it 'returns true for a draft pull_request_target event' do
+      ENV['GITHUB_EVENT_NAME'] = 'pull_request_target'
+      file = write_event({ 'pull_request' => { 'draft' => true } })
+      expect(described_class.draft_pull_request?).to be(true)
+    ensure
+      file&.unlink
+    end
+
+    it 'returns false for a non-draft pull request' do
+      ENV['GITHUB_EVENT_NAME'] = 'pull_request'
+      file = write_event({ 'pull_request' => { 'draft' => false } })
+      expect(described_class.draft_pull_request?).to be(false)
+    ensure
+      file&.unlink
+    end
+
+    it 'returns false when the event is not a pull request' do
+      ENV['GITHUB_EVENT_NAME'] = 'push'
+      expect(described_class.draft_pull_request?).to be(false)
+    end
+
+    it 'returns false when GITHUB_EVENT_PATH is unset' do
+      ENV['GITHUB_EVENT_NAME'] = 'pull_request'
+      ENV.delete('GITHUB_EVENT_PATH')
+      expect(described_class.draft_pull_request?).to be(false)
+    end
+
+    it 'returns false when the event file is missing' do
+      ENV['GITHUB_EVENT_NAME'] = 'pull_request'
+      ENV['GITHUB_EVENT_PATH'] = '/nonexistent/event.json'
+      expect(described_class.draft_pull_request?).to be(false)
+    end
+
+    it 'returns false when the event payload is malformed' do
+      ENV['GITHUB_EVENT_NAME'] = 'pull_request'
+      file = Tempfile.new(['event', '.json'])
+      file.write('{ not valid json')
+      file.close
+      ENV['GITHUB_EVENT_PATH'] = file.path
+      expect(described_class.draft_pull_request?).to be(false)
+    ensure
+      file&.unlink
+    end
+
+    it 'returns false when the payload has an unexpected shape' do
+      ENV['GITHUB_EVENT_NAME'] = 'pull_request'
+      file = write_event(%w[not an object])
+      expect(described_class.draft_pull_request?).to be(false)
+    ensure
+      file&.unlink
     end
   end
 end

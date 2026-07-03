@@ -147,6 +147,11 @@ module Mergify
         return unless @token && @repo_name
         return unless Utils.env_truthy?('_MERGIFY_TEST_NEW_FLAKY_DETECTION')
 
+        # Draft pull requests (e.g. Mergify merge-queue batch PRs) run CI but
+        # must not spend extra CI budget on reruns, so skip flaky detection on
+        # them. Non-draft PRs and push/scheduled runs are unaffected.
+        return if Utils.draft_pull_request?
+
         require_relative 'flaky_detection'
         mode = @base_branch_name ? 'new' : 'unhealthy'
         @flaky_detector = FlakyDetector.new(

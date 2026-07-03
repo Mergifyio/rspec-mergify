@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'json'
+require 'tempfile'
 require 'mergify/rspec/ci_insights'
 
 RSpec.describe Mergify::RSpec do # rubocop:disable RSpec/SpecFilePathFormat
@@ -82,7 +84,7 @@ RSpec.describe Mergify::RSpec do # rubocop:disable RSpec/SpecFilePathFormat
 
     def clear_ci_env
       %w[CI RSPEC_MERGIFY_ENABLE GITHUB_ACTIONS CIRCLECI JENKINS_URL _RSPEC_MERGIFY_TEST
-         MERGIFY_TOKEN MERGIFY_API_URL RSPEC_MERGIFY_DEBUG].each do |var|
+         MERGIFY_TOKEN MERGIFY_API_URL RSPEC_MERGIFY_DEBUG GITHUB_EVENT_NAME GITHUB_EVENT_PATH].each do |var|
         ENV.delete(var)
       end
     end
@@ -227,6 +229,23 @@ RSpec.describe Mergify::RSpec do # rubocop:disable RSpec/SpecFilePathFormat
         insights = described_class.new
         expect(insights.flaky_detector).to be_nil
         expect(insights.flaky_detector_error_message).to include('Could not load flaky detector')
+      end
+
+      it 'skips flaky detection on draft pull requests' do
+        stub = stub_request(:get, 'https://api.mergify.com/v1/ci/owner/repositories/repo/flaky-detection-context')
+
+        event_file = Tempfile.new(['event', '.json'])
+        event_file.write(JSON.generate({ 'pull_request' => { 'draft' => true } }))
+        event_file.close
+        ENV['GITHUB_EVENT_NAME'] = 'pull_request'
+        ENV['GITHUB_EVENT_PATH'] = event_file.path
+
+        insights = described_class.new
+        expect(insights.flaky_detector).to be_nil
+        expect(insights.flaky_detector_error_message).to be_nil
+        expect(stub).not_to have_been_requested
+      ensure
+        event_file&.unlink
       end
     end
 

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'json'
 require 'open3'
 
 module Mergify
@@ -42,6 +43,25 @@ module Mergify
       # RSPEC_MERGIFY_ENABLE is set to a truthy value.
       def in_ci?
         env_truthy?('CI') || env_truthy?('RSPEC_MERGIFY_ENABLE')
+      end
+
+      # Returns true when the current GitHub Actions run targets a draft pull
+      # request (e.g. a Mergify merge-queue batch pull request), false otherwise.
+      # Draft pull requests run CI but must not spend extra CI budget on
+      # flaky-detection reruns.
+      def draft_pull_request?
+        return false unless %w[pull_request pull_request_target].include?(ENV.fetch('GITHUB_EVENT_NAME', nil))
+
+        event_path = ENV.fetch('GITHUB_EVENT_PATH', nil)
+        return false unless event_path && File.file?(event_path)
+
+        event = JSON.parse(File.read(event_path))
+        pull_request = event['pull_request'] if event.is_a?(Hash)
+        pull_request.is_a?(Hash) && pull_request['draft'] == true
+      rescue JSON::ParserError, SystemCallError, IOError
+        # A malformed or unreadable event payload must not crash the suite;
+        # keep flaky detection enabled in that case.
+        false
       end
 
       # Evaluates whether a CI environment variable should be considered enabled.
