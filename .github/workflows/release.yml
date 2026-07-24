@@ -16,7 +16,7 @@ jobs:
     env:
       GEM_VERSION: ${{ github.event.release.tag_name }}
     steps:
-      - uses: actions/checkout@v7.0.0
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ github.event.release.tag_name }}
 
