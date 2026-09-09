@@ -1,5 +1,15 @@
 # rspec-mergify
 
+> **This repository is no longer the development home.** Development continues in
+> [Mergifyio/mergify-ci-integrations](https://github.com/Mergifyio/mergify-ci-integrations),
+> under [`clients/rspec-mergify/`](https://github.com/Mergifyio/mergify-ci-integrations/tree/main/clients/rspec-mergify).
+>
+> **The gem is unaffected and still maintained.** `rspec-mergify` is still published
+> to RubyGems from the monorepo, and installation instructions are unchanged.
+>
+> Please open issues and pull requests on
+> [Mergifyio/mergify-ci-integrations](https://github.com/Mergifyio/mergify-ci-integrations).
+
 RSpec plugin for [Mergify Test Insights](https://docs.mergify.com/ci-insights/).
 
 ## Features
